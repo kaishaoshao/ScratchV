@@ -264,6 +264,10 @@ def main(argv: list[str] | None = None) -> int:
             print(f"  optimizer: {result.stats['opt_message']}", file=sys.stderr)
         if result.stats.get("cycle_report"):
             print(result.stats["cycle_report"], file=sys.stderr)
+        if result.stats.get("instruction_count"):
+            from scratchv.backend.inst_counter import InstructionStats, render_text
+            st = InstructionStats.from_dict(result.stats["instruction_count"])
+            print(render_text(st), file=sys.stderr)
 
         # Verification
         if args.verify:

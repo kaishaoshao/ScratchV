@@ -243,6 +243,12 @@ class CompilerDriver:
         if output_path is None:
             output_path = "output.ll" if self.config.backend == "llvm" else "output.s"
 
+        if self.config.backend == "llvm" and self.config.count_instr:
+            return CompileResult(
+                success=False,
+                errors=["Instruction counting is not supported for LLVM backend."],
+            )
+
         use_dsl = (
             dsl_source is not None
             or (input_path and input_path.endswith(".dsl"))
@@ -326,7 +332,13 @@ class CompilerDriver:
         # --- 5. Post-codegen passes ---
         asm_text = self._run_asm_passes(asm_text, warnings)
 
-        # --- 6. Cycle estimation ---
+        # --- 6. Instruction count stats ---
+        instruction_count_stats = None
+        if self.config.count_instr:
+            from scratchv.backend.inst_counter import analyze_instructions
+            instruction_count_stats = analyze_instructions(asm_text).to_dict()
+
+        # --- 7. Cycle estimation ---
         cycle_report = ""
         if self.config.cycle_stats:
             from scratchv.backend.cycle_estimator import (
@@ -344,16 +356,23 @@ class CompilerDriver:
             except Exception as e:
                 warnings.append(f"Cycle estimation failed: {e}")
 
-        # --- 7. Write output ---
+        # --- 8. Write output ---
         with open(output_path, "w") as f:
             f.write(asm_text)
+
+        result_stats: dict[str, Any] = {
+            "opt_message": opt_message,
+            "cycle_report": cycle_report,
+        }
+        if instruction_count_stats is not None:
+            result_stats["instruction_count"] = instruction_count_stats
 
         return CompileResult(
             success=True,
             output_text=asm_text,
             output_path=output_path,
             ir_dump=ir_dump,
-            stats={"opt_message": opt_message, "cycle_report": cycle_report},
+            stats=result_stats,
             warnings=warnings,
         )
 
@@ -538,13 +557,6 @@ class CompilerDriver:
         if self.config.beautify_asm:
             from scratchv.backend.asm_beautifier import beautify_asm
             asm_text = beautify_asm(asm_text)
-
-        if self.config.count_instr:
-            from scratchv.backend.inst_counter import count_instructions
-            counts = count_instructions(asm_text)
-            total = sum(v for k, v in counts.items()
-                        if not k.startswith("_") and isinstance(v, int))
-            warnings.append(f"Instruction count: {total}")
 
         return asm_text
 

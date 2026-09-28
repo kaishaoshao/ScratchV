@@ -13,3 +13,6 @@
 [2026-09-19] 前端语义增强会有意改变固定 DSL 语料的 IR；基线 benchmark 应按用例显式列出允许变化，继续拒绝未列出的 IR 差异，并保留同语料、诊断正确与性能阈值检查。适用于多个前端课题共用同一 A/B benchmark 的 CI。
 
 [2026-09-19] 课题专项 benchmark 应接入原有 CI job，摘要表常显，逐用例源码、IR 与汇编放入默认关闭的 details/summary，并同时产出 JSON/Markdown/HTML 到既有 artifact。适用于需要在 Actions Summary 展示详细编译日志的课题。
+
+[2026-09-28] Topic 12 指令计数统计器采用文本静态 mnemonic 口径（每个出现在文本中的指令计 1 条，不猜测展开长度）；控制流伪指令（call/tail/j/jr/ret）归入 JUMP，条件分支归入 BRANCH，仅非控制流语法糖归入 PSEUDO，未知指令进入 MISC 并保留 unknown_opcodes 明细；解析必须复用共享 parser 且在所有汇编后处理之后执行；正常统计存入 CompileResult.stats["instruction_count"] 而非 warnings；多文件对比校验 schema/classification/count_mode/isa 可比性，同名 basename 须做唯一 label 消歧。适用于后端汇编统计、A/B 优化比对与 CI。
+
